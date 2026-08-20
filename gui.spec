@@ -30,7 +30,8 @@ hiddenimports = ctk_hiddenimports + [
     'src.processors.filter',
     'src.processors.claude_synthesizer',
     'src.storage.memory_manager',
-    'src.formatters.markdown_builder'
+    'src.formatters.markdown_builder',
+    'src.formatters.html_builder'
 ]
 
 block_cipher = None

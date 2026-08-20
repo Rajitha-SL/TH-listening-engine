@@ -9,6 +9,7 @@ import threading
 import subprocess
 import time
 import argparse
+import webbrowser
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -140,6 +141,25 @@ class TrailheadApp(ctk.CTk):
         self._check_api_key_status()
         self._refresh_report_list()
 
+    def _show_tooltip_popup(self, title: str, text: str):
+        """Displays a clean modal popover with help/tooltip information."""
+        popup = ctk.CTkToplevel(self)
+        popup.title(title)
+        popup.geometry("520x320")
+        popup.resizable(False, False)
+        popup.grab_set()
+
+        lbl_title = ctk.CTkLabel(popup, text=title, font=ctk.CTkFont(size=15, weight="bold"))
+        lbl_title.pack(padx=20, pady=(20, 10), anchor="w")
+
+        textbox = ctk.CTkTextbox(popup, font=ctk.CTkFont(size=12), wrap="word")
+        textbox.pack(fill="both", expand=True, padx=20, pady=(0, 15))
+        textbox.insert("1.0", text)
+        textbox.configure(state="disabled")
+
+        btn_close = ctk.CTkButton(popup, text="Close", width=100, command=popup.destroy)
+        btn_close.pack(pady=(0, 15))
+
     def _create_sidebar(self):
         self.sidebar_frame = ctk.CTkFrame(self, width=220, corner_radius=0)
         self.sidebar_frame.pack(side="left", fill="y", padx=0, pady=0)
@@ -218,11 +238,13 @@ class TrailheadApp(ctk.CTk):
         self.tab_config = self.tabview.add(" Settings & API Key ")
         self.tab_scheduler = self.tabview.add(" Background Scheduler ")
         self.tab_reports = self.tabview.add(" Reports Viewer ")
+        self.tab_help = self.tabview.add(" 📖 Help & Manual ")
 
         self._setup_run_tab()
         self._setup_config_tab()
         self._setup_scheduler_tab()
         self._setup_reports_tab()
+        self._setup_help_tab()
 
     def _setup_run_tab(self):
         # Mode Selection
@@ -230,7 +252,17 @@ class TrailheadApp(ctk.CTk):
         self.mode_frame.pack(fill="x", padx=10, pady=(10, 5))
 
         self.mode_lbl = ctk.CTkLabel(self.mode_frame, text="Execution Mode:", font=ctk.CTkFont(size=13, weight="bold"))
-        self.mode_lbl.pack(side="left", padx=(0, 15))
+        self.mode_lbl.pack(side="left", padx=(0, 10))
+
+        self.btn_help_mode = ctk.CTkButton(
+            self.mode_frame, text="?", width=24, height=24, font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color=("gray70", "gray30"), hover_color=("gray60", "gray40"),
+            command=lambda: self._show_tooltip_popup(
+                "Execution Modes Help",
+                "• Targeted Query Brief (Query Mode):\nAllows entering custom prompts or selecting quick presets (e.g. 'Copilot security risks in legal') to run focused market ingestion & synthesis for client meetings.\n\n• Automated Weekly Digest (Weekly Mode):\nExecutes a broad scan across all subreddits and RSS feeds configured in config.yaml, updating historical trend memory store."
+            )
+        )
+        self.btn_help_mode.pack(side="left", padx=(0, 15))
 
         self.mode_var = ctk.StringVar(value="query")
         self.radio_query = ctk.CTkRadioButton(
@@ -297,63 +329,99 @@ class TrailheadApp(ctk.CTk):
         self.days_lbl = ctk.CTkLabel(self.opts_frame, text="Lookback Days:", font=ctk.CTkFont(size=12, weight="bold"))
         self.days_lbl.pack(side="left", padx=(0, 5))
 
-        self.days_val_lbl = ctk.CTkLabel(self.opts_frame, text="14 days", font=ctk.CTkFont(size=12))
-        self.days_val_lbl.pack(side="left", padx=(0, 10))
+        self.btn_help_days = ctk.CTkButton(
+            self.opts_frame, text="?", width=24, height=24, font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color=("gray70", "gray30"), hover_color=("gray60", "gray40"),
+            command=lambda: self._show_tooltip_popup(
+                "Lookback Days Help",
+                "Filters ingested Reddit posts and RSS articles by age.\n\n• 7 Days: Best for recent weekly trend monitoring.\n• 14-30 Days: Best for deeper historical research and on-demand client prep briefs."
+            )
+        )
+        self.btn_help_days.pack(side="left", padx=(0, 10))
 
         self.days_slider = ctk.CTkSlider(
             self.opts_frame, from_=1, to=30, number_of_steps=29, width=180,
             command=self._on_slider_change
         )
-        self.days_slider.set(14)
+        self.days_slider.set(7)
         self.days_slider.pack(side="left", padx=5)
 
+        self.days_val_lbl = ctk.CTkLabel(self.opts_frame, text="7 Days", font=ctk.CTkFont(size=12, weight="bold"), width=50)
+        self.days_val_lbl.pack(side="left", padx=5)
+
+        self.mock_var = ctk.BooleanVar(value=False)
         self.mock_switch = ctk.CTkSwitch(
-            self.opts_frame, text="Dry-Run / Mock Mode (No API Calls)", 
-            font=ctk.CTkFont(size=12)
+            self.opts_frame, text="Dry-Run / Mock Mode (Offline Testing)", 
+            variable=self.mock_var, font=ctk.CTkFont(size=12)
         )
         self.mock_switch.pack(side="right", padx=10)
 
-        # Action Run Button & Progress Bar
+        # Action Buttons
+        self.actions_frame = ctk.CTkFrame(self.tab_run, fg_color="transparent")
+        self.actions_frame.pack(fill="x", padx=10, pady=10)
+
         self.run_btn = ctk.CTkButton(
-            self.tab_run, text="⚡ Run Market Listening Engine", 
-            font=ctk.CTkFont(size=14, weight="bold"), height=42,
+            self.actions_frame, text="🚀 Run Ingestion & Synthesis Engine", 
+            font=ctk.CTkFont(size=14, weight="bold"), height=40,
             fg_color="#1f538d", hover_color="#14375e",
             command=self._start_engine_run
         )
-        self.run_btn.pack(fill="x", padx=10, pady=12)
+        self.run_btn.pack(side="left", fill="x", expand=True, padx=(0, 10))
 
-        self.progress_bar = ctk.CTkProgressBar(self.tab_run)
-        self.progress_bar.pack(fill="x", padx=10, pady=(0, 10))
-        self.progress_bar.set(0)
+        self.cancel_btn = ctk.CTkButton(
+            self.actions_frame, text="Stop Engine", 
+            font=ctk.CTkFont(size=13, weight="bold"), height=40, width=120,
+            fg_color="#c0392b", hover_color="#962d22", state="disabled",
+            command=self._on_stop_engine_click
+        )
+        self.cancel_btn.pack(side="right")
 
-        # Live Console Output Box
-        self.log_box_lbl = ctk.CTkLabel(self.tab_run, text="Live Execution Output Log:", font=ctk.CTkFont(size=12, weight="bold"))
-        self.log_box_lbl.pack(padx=10, anchor="w")
+        # Live Terminal Console Log Display
+        self.log_frame = ctk.CTkFrame(self.tab_run, fg_color=("gray90", "gray17"), corner_radius=8)
+        self.log_frame.pack(fill="both", expand=True, padx=10, pady=(5, 10))
 
-        self.log_textbox = ctk.CTkTextbox(self.tab_run, font=ctk.CTkFont(family="Consolas", size=11))
-        self.log_textbox.pack(fill="both", expand=True, padx=10, pady=(5, 10))
+        self.log_title = ctk.CTkLabel(self.log_frame, text="Live Execution Console Output:", font=ctk.CTkFont(size=12, weight="bold"))
+        self.log_title.pack(padx=10, pady=(8, 2), anchor="w")
+
+        self.console_textbox = ctk.CTkTextbox(
+            self.log_frame, font=ctk.CTkFont(family="Consolas", size=11),
+            fg_color=("white", "black"), text_color=("black", "#00ff66")
+        )
+        self.console_textbox.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self.console_textbox.configure(state="disabled")
 
     def _setup_config_tab(self):
-        self.api_frame = ctk.CTkFrame(self.tab_config, fg_color=("gray90", "gray17"), corner_radius=8)
-        self.api_frame.pack(fill="x", padx=15, pady=15)
+        # API Key Card
+        self.key_box = ctk.CTkFrame(self.tab_config, fg_color=("gray90", "gray17"), corner_radius=8)
+        self.key_box.pack(fill="x", padx=15, pady=15)
 
-        self.api_title = ctk.CTkLabel(
-            self.api_frame, text="🔑 Anthropic Claude API Key Configuration", 
+        self.api_key_lbl = ctk.CTkLabel(
+            self.key_box, text="🔑 Anthropic Claude API Key Configuration", 
             font=ctk.CTkFont(size=14, weight="bold")
         )
-        self.api_title.pack(padx=15, pady=(15, 5), anchor="w")
+        self.api_key_lbl.pack(side="left", padx=15, pady=(15, 5))
 
-        self.api_desc = ctk.CTkLabel(
-            self.api_frame, 
-            text="Your API key is stored safely in your local .env file and never transmitted to third parties.",
+        self.btn_help_api = ctk.CTkButton(
+            self.key_box, text="?", width=24, height=24, font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color=("gray70", "gray30"), hover_color=("gray60", "gray40"),
+            command=lambda: self._show_tooltip_popup(
+                "Claude API Key Help",
+                "What is it?\nYour API key connects the engine to Anthropic's Claude 3.5 Sonnet LLM for market synthesis.\n\nSecurity:\nStored strictly in your local .env file. Never uploaded or shared.\n\nHow to get a key:\nSign in to console.anthropic.com, navigate to API Keys, and generate a key starting with 'sk-ant-api...'."
+            )
+        )
+        self.btn_help_api.pack(side="right", padx=15, pady=(15, 5))
+
+        self.api_key_desc = ctk.CTkLabel(
+            self.key_box, 
+            text="Enter your Anthropic API Key below. It will be saved securely to your local .env file.",
             font=ctk.CTkFont(size=12), text_color="gray"
         )
-        self.api_desc.pack(padx=15, pady=(0, 15), anchor="w")
+        self.api_key_desc.pack(padx=15, pady=(0, 10), anchor="w")
 
-        self.key_entry_frame = ctk.CTkFrame(self.api_frame, fg_color="transparent")
+        self.key_entry_frame = ctk.CTkFrame(self.key_box, fg_color="transparent")
         self.key_entry_frame.pack(fill="x", padx=15, pady=(0, 15))
 
-        current_key = os.getenv("ANTHROPIC_API_KEY", "")
+        current_key = os.environ.get("ANTHROPIC_API_KEY", "")
         self.api_key_entry = ctk.CTkEntry(
             self.key_entry_frame, show="*", placeholder_text="sk-ant-api...",
             font=ctk.CTkFont(size=13)
@@ -421,7 +489,17 @@ class TrailheadApp(ctk.CTk):
             self.sched_box, text="⏰ Automated Background Digest Scheduling", 
             font=ctk.CTkFont(size=14, weight="bold")
         )
-        self.sched_title.pack(padx=15, pady=(15, 5), anchor="w")
+        self.sched_title.pack(side="left", padx=15, pady=(15, 5))
+
+        self.btn_help_sched = ctk.CTkButton(
+            self.sched_box, text="?", width=24, height=24, font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color=("gray70", "gray30"), hover_color=("gray60", "gray40"),
+            command=lambda: self._show_tooltip_popup(
+                "Background Auto-Scheduler Help",
+                "Automates Weekly Intelligence Digest generation.\n\n• When enabled, the background daemon loop runs pending schedule tasks.\n• Default timing: Monday at 14:00 UTC (07:00 AM PT).\n• Automatically saves both .md and .html reports to output/ folder."
+            )
+        )
+        self.btn_help_sched.pack(side="right", padx=15, pady=(15, 5))
 
         self.sched_desc = ctk.CTkLabel(
             self.sched_box, 
@@ -456,10 +534,10 @@ class TrailheadApp(ctk.CTk):
         self.day_option.pack(side="left", padx=5, pady=15)
 
         self.time_lbl = ctk.CTkLabel(self.sched_opts, text="Execution Time (UTC):", font=ctk.CTkFont(size=12, weight="bold"))
-        self.time_lbl.pack(side="left", padx=(20, 5), pady=15)
+        self.time_lbl.pack(side="left", padx=(15, 5), pady=15)
 
-        self.time_entry = ctk.CTkEntry(self.sched_opts, width=90, font=ctk.CTkFont(size=12))
-        self.time_entry.insert(0, "14:00")  # Default 14:00 UTC (07:00 AM PT)
+        self.time_entry = ctk.CTkEntry(self.sched_opts, width=80, font=ctk.CTkFont(size=12))
+        self.time_entry.insert(0, "14:00")
         self.time_entry.pack(side="left", padx=5, pady=15)
 
         self.update_sched_btn = ctk.CTkButton(
@@ -498,14 +576,21 @@ class TrailheadApp(ctk.CTk):
         )
         self.open_folder_btn.pack(side="left", padx=5)
 
+        self.open_html_btn = ctk.CTkButton(
+            self.reports_top_frame, text="🌐 Launch HTML in Web Browser", width=210,
+            fg_color="#2fa572", hover_color="#1e6b4a",
+            command=self._open_selected_report_browser
+        )
+        self.open_html_btn.pack(side="right", padx=5)
+
         self.open_file_btn = ctk.CTkButton(
-            self.reports_top_frame, text="↗️ Open Selected in System App", width=220,
+            self.reports_top_frame, text="↗️ Open Selected File", width=160,
             fg_color="#1f538d", hover_color="#14375e",
             command=self._open_selected_report_external
         )
         self.open_file_btn.pack(side="right", padx=5)
 
-        # Split View: Left List, Right Markdown Preview
+        # Split View: Left List, Right Markdown/HTML Preview
         self.reports_split_frame = ctk.CTkFrame(self.tab_reports, fg_color="transparent")
         self.reports_split_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
 
@@ -513,7 +598,7 @@ class TrailheadApp(ctk.CTk):
         self.reports_left_frame = ctk.CTkFrame(self.reports_split_frame, width=280, fg_color=("gray90", "gray17"))
         self.reports_left_frame.pack(side="left", fill="y", padx=(0, 10))
 
-        self.list_lbl = ctk.CTkLabel(self.reports_left_frame, text="Generated Reports:", font=ctk.CTkFont(size=12, weight="bold"))
+        self.list_lbl = ctk.CTkLabel(self.reports_left_frame, text="Generated Reports (.md & .html):", font=ctk.CTkFont(size=12, weight="bold"))
         self.list_lbl.pack(padx=10, pady=(10, 5), anchor="w")
 
         self.reports_option_menu = ctk.CTkOptionMenu(
@@ -529,8 +614,72 @@ class TrailheadApp(ctk.CTk):
         self.preview_lbl = ctk.CTkLabel(self.reports_preview_frame, text="Report Document Preview:", font=ctk.CTkFont(size=12, weight="bold"))
         self.preview_lbl.pack(padx=10, pady=(10, 5), anchor="w")
 
-        self.preview_textbox = ctk.CTkTextbox(self.reports_preview_frame, font=ctk.CTkFont(family="Consolas", size=11))
+        self.preview_textbox = ctk.CTkTextbox(
+            self.reports_preview_frame, font=ctk.CTkFont(size=12)
+        )
         self.preview_textbox.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+    def _setup_help_tab(self):
+        # Quick action buttons at top
+        self.help_top_frame = ctk.CTkFrame(self.tab_help, fg_color="transparent")
+        self.help_top_frame.pack(fill="x", padx=10, pady=10)
+
+        b1 = ctk.CTkButton(
+            self.help_top_frame, text="🔑 Anthropic API Console", width=160,
+            command=lambda: webbrowser.open("https://console.anthropic.com/")
+        )
+        b1.pack(side="left", padx=(0, 10))
+
+        b2 = ctk.CTkButton(
+            self.help_top_frame, text="📘 Client Setup Manual", width=160,
+            fg_color=("gray70", "gray30"), hover_color=("gray60", "gray38"),
+            command=lambda: open_filepath(os.path.abspath("CLIENT_SETUP_GUIDE.md"))
+        )
+        b2.pack(side="left", padx=5)
+
+        b3 = ctk.CTkButton(
+            self.help_top_frame, text="📁 Open Output Directory", width=160,
+            fg_color=("gray70", "gray30"), hover_color=("gray60", "gray38"),
+            command=lambda: open_filepath(os.path.abspath("output"))
+        )
+        b3.pack(side="left", padx=5)
+
+        # Help Textbox
+        self.help_textbox = ctk.CTkTextbox(self.tab_help, font=ctk.CTkFont(size=12))
+        self.help_textbox.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        help_text = """🛰️ TRAILHEAD MARKET LISTENING ENGINE — IN-APP USER MANUAL
+
+1. GETTING STARTED & SETUP
+• Your API Key is configured in the "Settings & API Key" tab.
+• Stored safely in your local .env file (never uploaded or shared).
+• Get a key at console.anthropic.com.
+
+2. RUNNING INTELLIGENCE INGESTION
+• Targeted Query Brief (Query Mode):
+  - Enter specific prompts (e.g. "Copilot security risks in legal") or click quick presets.
+  - Generates both Markdown (.md) and interactive HTML (.html) reports with direct source evidence links.
+• Automated Weekly Digest (Weekly Mode):
+  - Comprehensive scan across all configured subreddits and RSS feeds in config.yaml.
+  - Updates long-term trend memory store (history_store.json).
+
+3. AUTO-SCHEDULER
+• Background daemon auto-runs weekly digests on schedule (default: Monday 07:00 AM PT / 14:00 UTC).
+• Runs seamlessly in background while app is open.
+
+4. REPORTS & EXPORTS
+• Outputs saved to output/ folder in standardized 24-hour timestamp format:
+  - digest_YYYY_MM_DD_HHMM.html & digest_YYYY_MM_DD_HHMM.md
+  - query_YYYY_MM_DD_HHMM.html & query_YYYY_MM_DD_HHMM.md
+• Click "🌐 Launch HTML in Web Browser" to open interactive HTML report.
+
+5. TROUBLESHOOTING
+• Missing API Key: Check Settings & API Key tab. Ensure key starts with sk-ant-api...
+• Network Connection: Ingestion requires active internet connection for Reddit & RSS feeds.
+• Mock Mode: Enable Dry-Run / Mock Mode switch for testing without invoking external APIs.
+"""
+        self.help_textbox.insert("1.0", help_text)
+        self.help_textbox.configure(state="disabled")
 
     # --- Controller Logic & Event Handlers ---
 
@@ -694,7 +843,7 @@ class TrailheadApp(ctk.CTk):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
 
-        files = [f for f in os.listdir(output_dir) if f.endswith(".md")]
+        files = [f for f in os.listdir(output_dir) if f.endswith(".md") or f.endswith(".html")]
         files.sort(key=lambda x: os.path.getmtime(os.path.join(output_dir, x)), reverse=True)
 
         def update():
@@ -723,6 +872,20 @@ class TrailheadApp(ctk.CTk):
         if choice and choice != "No reports found":
             filepath = os.path.abspath(os.path.join("output", choice))
             open_filepath(filepath)
+
+    def _open_selected_report_browser(self):
+        choice = self.reports_option_menu.get()
+        if choice and choice != "No reports found":
+            if choice.endswith(".html"):
+                filepath = os.path.abspath(os.path.join("output", choice))
+            else:
+                base = os.path.splitext(choice)[0]
+                html_candidate = base + ".html"
+                if os.path.exists(os.path.join("output", html_candidate)):
+                    filepath = os.path.abspath(os.path.join("output", html_candidate))
+                else:
+                    filepath = os.path.abspath(os.path.join("output", choice))
+            webbrowser.open(filepath)
 
 
 def main():

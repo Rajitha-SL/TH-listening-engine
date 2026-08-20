@@ -8,6 +8,7 @@ import os
 import yaml
 import argparse
 import logging
+import webbrowser
 from datetime import datetime, timezone
 from typing import Dict, Any
 
@@ -17,6 +18,7 @@ from src.processors.filter import ContentFilter
 from src.processors.claude_synthesizer import ClaudeSynthesizer
 from src.storage.memory_manager import MemoryManager
 from src.formatters.markdown_builder import MarkdownBuilder
+from src.formatters.html_builder import HTMLBuilder
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -86,8 +88,8 @@ def run_weekly_mode(config: Dict[str, Any], args: Any, status_callback=None) -> 
         if status_callback:
             status_callback("--- Starting Weekly Intelligence Digest Ingestion ---")
         
-        # Accurate execution timestamp including hours, minutes, and seconds
-        timestamp = datetime.now(timezone.utc).strftime("%Y_%m_%d_%H%M%S")
+        # Standardized 24-hour timestamp format (YYYY_MM_DD_HHMM)
+        timestamp = datetime.now(timezone.utc).strftime("%Y_%m_%d_%H%M")
         report_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         subreddits = config.get("target_sources", {}).get("subreddits", [])
@@ -132,7 +134,7 @@ def run_weekly_mode(config: Dict[str, Any], args: Any, status_callback=None) -> 
         memory_manager = MemoryManager(history_file_path=history_path)
         annotated_findings = memory_manager.process_and_update(report_dict.get("findings", []))
 
-        # 5. Build Markdown digest
+        # 5. Build Markdown & HTML digests
         builder = MarkdownBuilder(config)
         markdown_output = builder.build_weekly_digest(
             report_date=report_date,
@@ -140,15 +142,34 @@ def run_weekly_mode(config: Dict[str, Any], args: Any, status_callback=None) -> 
             findings=annotated_findings
         )
 
-        # 6. Save to unique timestamped output file
+        html_builder = HTMLBuilder(config)
+        html_output = html_builder.build_weekly_html(
+            report_date=report_date,
+            synthesis_data=report_dict,
+            findings=annotated_findings
+        )
+
+        # 6. Save dual timestamped output files (.md and .html)
         os.makedirs(output_dir, exist_ok=True)
         digest_filename = f"digest_{timestamp}.md"
         digest_filepath = os.path.join(output_dir, digest_filename)
+        html_filename = f"digest_{timestamp}.html"
+        html_filepath = os.path.join(output_dir, html_filename)
 
         with open(digest_filepath, "w", encoding="utf-8") as f:
             f.write(markdown_output)
 
-        logger.info(f"Successfully generated weekly digest: {digest_filepath}")
+        with open(html_filepath, "w", encoding="utf-8") as f:
+            f.write(html_output)
+
+        logger.info(f"Successfully generated weekly digest: {digest_filepath} & {html_filepath}")
+
+        # 7. Auto-open interactive HTML report in default browser
+        try:
+            webbrowser.open(os.path.abspath(html_filepath))
+        except Exception as e:
+            logger.warning(f"Could not auto-open HTML report in browser: {e}")
+
         return digest_filepath
     finally:
         if gui_handler:
@@ -178,8 +199,8 @@ def run_query_mode(config: Dict[str, Any], args: Any, status_callback=None) -> s
         if status_callback:
             status_callback(f"--- Starting On-Demand Query Mode: '{prompt_str}' ---")
         
-        # Accurate execution timestamp including hours, minutes, and seconds
-        timestamp = datetime.now(timezone.utc).strftime("%Y_%m_%d_%H%M%S")
+        # Standardized 24-hour timestamp format (YYYY_MM_DD_HHMM)
+        timestamp = datetime.now(timezone.utc).strftime("%Y_%m_%d_%H%M")
         report_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         subreddits = config.get("target_sources", {}).get("subreddits", [])
@@ -219,9 +240,17 @@ def run_query_mode(config: Dict[str, Any], args: Any, status_callback=None) -> s
         synthesis_report = synthesizer.synthesize(filtered_items, query_prompt=prompt_str, mock=mock_mode)
         report_dict = synthesis_report.model_dump()
 
-        # 4. Build targeted Markdown brief
+        # 4. Build targeted Markdown brief & HTML report
         builder = MarkdownBuilder(config)
         markdown_output = builder.build_query_brief(
+            query_prompt=prompt_str,
+            report_date=report_date,
+            synthesis_data=report_dict,
+            findings=report_dict.get("findings", [])
+        )
+
+        html_builder = HTMLBuilder(config)
+        html_output = html_builder.build_query_html(
             query_prompt=prompt_str,
             report_date=report_date,
             synthesis_data=report_dict,
@@ -236,15 +265,27 @@ def run_query_mode(config: Dict[str, Any], args: Any, status_callback=None) -> s
             print(markdown_output.encode("ascii", errors="backslashreplace").decode("ascii"))
         print("=" * 80 + "\n")
 
-        # 5. Save to unique timestamped output file
+        # 5. Save dual timestamped output files (.md and .html)
         os.makedirs(output_dir, exist_ok=True)
         query_filename = f"query_{timestamp}.md"
         query_filepath = os.path.join(output_dir, query_filename)
+        html_filename = f"query_{timestamp}.html"
+        html_filepath = os.path.join(output_dir, html_filename)
 
         with open(query_filepath, "w", encoding="utf-8") as f:
             f.write(markdown_output)
 
-        logger.info(f"Targeted query brief saved to: {query_filepath}")
+        with open(html_filepath, "w", encoding="utf-8") as f:
+            f.write(html_output)
+
+        logger.info(f"Targeted query brief saved to: {query_filepath} & {html_filepath}")
+
+        # 6. Auto-open interactive HTML report in default browser
+        try:
+            webbrowser.open(os.path.abspath(html_filepath))
+        except Exception as e:
+            logger.warning(f"Could not auto-open HTML report in browser: {e}")
+
         return query_filepath
     finally:
         if gui_handler:

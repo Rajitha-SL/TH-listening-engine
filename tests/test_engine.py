@@ -206,3 +206,51 @@ def test_markdown_builder_formatting(sample_config):
     query_md = builder.build_query_brief("AI policy bypass", today, synthesis_data, findings)
     assert "# 🎯 Targeted Intelligence Brief" in query_md
     assert "`AI policy bypass`" in query_md
+
+
+def test_html_builder_formatting(sample_config):
+    from src.formatters.html_builder import HTMLBuilder
+    builder = HTMLBuilder(sample_config)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    findings = [
+        {
+            "hypothesis_id": "H1",
+            "pattern_name": "Latency Driving Shadow AI",
+            "trend_status": "Strengthening",
+            "date": today,
+            "source_url": "https://www.reddit.com/r/sysadmin/comments/mock_p3/",
+            "verbatim_quote": "When internal IT tools take 45 seconds per prompt response, frontline staff bypass security entirely.",
+            "persona_tag": "IT Admin",
+            "company_context": "Mid-market Enterprise",
+            "signal_strength": "High",
+            "source_count": 154,
+            "executive_takeaway": "Latency drives compliance risks."
+        }
+    ]
+
+    synthesis_data = {"summary_overview": "Test executive synthesis overview."}
+
+    weekly_html = builder.build_weekly_html(today, synthesis_data, findings)
+    assert "<!DOCTYPE html>" in weekly_html
+    assert "Trailhead Market Listening Engine" in weekly_html
+    assert "Latency Driving Shadow AI" in weekly_html
+    assert 'target="_blank"' in weekly_html
+    assert "https://www.reddit.com/r/sysadmin/comments/mock_p3/" in weekly_html
+    assert "👤 IT Admin" in weekly_html
+
+    query_html = builder.build_query_html("Copilot security", today, synthesis_data, findings)
+    assert "Targeted Market Intelligence Brief" in query_html
+    assert "Copilot security" in query_html
+
+
+def test_24hour_timestamp_format():
+    now_utc = datetime.now(timezone.utc)
+    ts = now_utc.strftime("%Y_%m_%d_%H%M")
+    parts = ts.split("_")
+    assert len(parts) == 4
+    assert len(parts[0]) == 4  # YYYY
+    assert len(parts[1]) == 2  # MM
+    assert len(parts[2]) == 2  # DD
+    assert len(parts[3]) == 4  # HHMM
+

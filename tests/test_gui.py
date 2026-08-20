@@ -44,6 +44,8 @@ def test_gui_engine_mock_query_run(sample_config):
     filepath = run_query_mode(sample_config, args, status_callback=log_cb)
 
     assert os.path.exists(filepath)
+    html_filepath = filepath.replace(".md", ".html")
+    assert os.path.exists(html_filepath)
     assert len(logs) > 0
     assert any("Starting On-Demand Query Mode" in l for l in logs)
 
@@ -57,6 +59,8 @@ def test_gui_engine_mock_weekly_run(sample_config):
     filepath = run_weekly_mode(sample_config, args, status_callback=log_cb)
 
     assert os.path.exists(filepath)
+    html_filepath = filepath.replace(".md", ".html")
+    assert os.path.exists(html_filepath)
     assert len(logs) > 0
     assert any("Starting Weekly Intelligence Digest" in l for l in logs)
 
