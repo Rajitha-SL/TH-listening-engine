@@ -76,3 +76,38 @@ def test_scheduler_manager_configuration():
     manager.update_schedule("Monday", "14:00")
     assert manager.scheduled_day == "monday"
     assert manager.scheduled_time == "14:00"
+
+
+def test_gui_config_tab_source_formatting(sample_config):
+    # Test formatting with dictionary and string rss_feeds
+    rss_feeds = [
+        {"name": "Feed 1", "url": "https://example.com/rss1"},
+        "https://example.com/rss2"
+    ]
+    subreddits = ["humanresources", "sysadmin"]
+
+    formatted_subreddits = [f"r/{s}" if isinstance(s, str) else f"r/{s.get('name', str(s))}" for s in subreddits]
+
+    formatted_rss = []
+    for feed in rss_feeds:
+        if isinstance(feed, dict):
+            name = feed.get("name")
+            url = feed.get("url")
+            if name and url:
+                formatted_rss.append(f"{name} ({url})")
+            elif name:
+                formatted_rss.append(name)
+            elif url:
+                formatted_rss.append(url)
+        elif isinstance(feed, str):
+            formatted_rss.append(feed)
+        else:
+            formatted_rss.append(str(feed))
+
+    sources_text = f"Subreddits ({len(subreddits)}):\n  " + (", ".join(formatted_subreddits) if formatted_subreddits else "None configured") + "\n\n"
+    sources_text += f"RSS Feeds ({len(rss_feeds)}):\n  " + ("\n  ".join(formatted_rss) if formatted_rss else "None configured")
+
+    assert "r/humanresources" in sources_text
+    assert "Feed 1 (https://example.com/rss1)" in sources_text
+    assert "https://example.com/rss2" in sources_text
+

@@ -5,9 +5,36 @@ Packages GUI application into a standalone distribution folder & zip archive for
 
 import sys
 import os
+import time
+import stat
 import shutil
 import zipfile
 import subprocess
+
+
+def remove_dir_force(path):
+    if not os.path.exists(path):
+        return
+    for root, dirs, files in os.walk(path, topdown=False):
+        for file in files:
+            p = os.path.join(root, file)
+            try:
+                os.chmod(p, stat.S_IWRITE)
+                os.unlink(p)
+            except Exception:
+                pass
+        for d in dirs:
+            p = os.path.join(root, d)
+            try:
+                os.chmod(p, stat.S_IWRITE)
+                os.rmdir(p)
+            except Exception:
+                pass
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        os.rmdir(path)
+    except Exception:
+        pass
 
 
 def build():
@@ -21,11 +48,19 @@ def build():
     zip_path = os.path.join(dist_dir, "TrailheadEngine_v1.0_Standalone.zip")
 
     # 1. Clean previous build artifacts
-    if os.path.exists(target_dir):
-        print(f"Cleaning previous build target: {target_dir}")
-        shutil.rmtree(target_dir)
+    for attempt in range(5):
+        if os.path.exists(target_dir):
+            print(f"Cleaning previous build target (attempt {attempt + 1}): {target_dir}")
+            remove_dir_force(target_dir)
+            time.sleep(0.5)
+        else:
+            break
+
     if os.path.exists(zip_path):
-        os.remove(zip_path)
+        try:
+            os.remove(zip_path)
+        except Exception:
+            pass
 
     # 2. Run PyInstaller on gui.spec
     cmd = [

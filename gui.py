@@ -387,8 +387,26 @@ class TrailheadApp(ctk.CTk):
         subreddits = self.config_data.get("target_sources", {}).get("subreddits", [])
         rss_feeds = self.config_data.get("target_sources", {}).get("rss_feeds", [])
 
-        sources_text = f"Subreddits ({len(subreddits)}):\n  " + ", ".join(f"r/{s}" for s in subreddits) + "\n\n"
-        sources_text += f"RSS Feeds ({len(rss_feeds)}):\n  " + ("\n  ".join(rss_feeds) if rss_feeds else "None configured")
+        formatted_subreddits = [f"r/{s}" if isinstance(s, str) else f"r/{s.get('name', str(s))}" for s in subreddits]
+
+        formatted_rss = []
+        for feed in rss_feeds:
+            if isinstance(feed, dict):
+                name = feed.get("name")
+                url = feed.get("url")
+                if name and url:
+                    formatted_rss.append(f"{name} ({url})")
+                elif name:
+                    formatted_rss.append(name)
+                elif url:
+                    formatted_rss.append(url)
+            elif isinstance(feed, str):
+                formatted_rss.append(feed)
+            else:
+                formatted_rss.append(str(feed))
+
+        sources_text = f"Subreddits ({len(subreddits)}):\n  " + (", ".join(formatted_subreddits) if formatted_subreddits else "None configured") + "\n\n"
+        sources_text += f"RSS Feeds ({len(rss_feeds)}):\n  " + ("\n  ".join(formatted_rss) if formatted_rss else "None configured")
 
         self.sources_textbox = ctk.CTkTextbox(self.sources_frame, font=ctk.CTkFont(size=12))
         self.sources_textbox.pack(fill="both", expand=True, padx=15, pady=(5, 15))
