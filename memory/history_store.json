@@ -7,7 +7,7 @@
       "hypothesis_id": "H1",
       "first_seen_date": "2026-08-18",
       "last_seen_date": "2026-08-20",
-      "occurrence_count": 4,
+      "occurrence_count": 8,
       "last_source_count": 154,
       "trend_status": "Strengthening",
       "verbatim_quote": "When internal IT tools take 45 seconds per prompt response, frontline staff bypass security entirely."
@@ -17,7 +17,7 @@
       "hypothesis_id": "H2",
       "first_seen_date": "2026-08-18",
       "last_seen_date": "2026-08-20",
-      "occurrence_count": 4,
+      "occurrence_count": 8,
       "last_source_count": 210,
       "trend_status": "Strengthening",
       "verbatim_quote": "VP declared 100% team usage of enterprise AI tools by end of Q3. My devs refuse to use the corporate wrapper because it hallucinates boilerplate and truncates context windows."
@@ -27,7 +27,7 @@
       "hypothesis_id": "H3",
       "first_seen_date": "2026-08-18",
       "last_seen_date": "2026-08-20",
-      "occurrence_count": 4,
+      "occurrence_count": 8,
       "last_source_count": 142,
       "trend_status": "Strengthening",
       "verbatim_quote": "HR managers are panicking because Copilot draft emails are referencing confidential severance templates."
@@ -37,7 +37,7 @@
       "hypothesis_id": "EMERGING",
       "first_seen_date": "2026-08-18",
       "last_seen_date": "2026-08-20",
-      "occurrence_count": 4,
+      "occurrence_count": 8,
       "last_source_count": 89,
       "trend_status": "Strengthening",
       "verbatim_quote": "They put 'AI Transformation' in our quarterly KPIs but blocked every plugin that actually makes Claude or ChatGPT useful."
