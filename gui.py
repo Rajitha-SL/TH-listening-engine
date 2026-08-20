@@ -737,14 +737,18 @@ class TrailheadApp(ctk.CTk):
             self.is_running = running
             if running:
                 self.run_btn.configure(state="disabled", text="⏳ Running Engine...")
-                self.progress_bar.configure(mode="indeterminate")
-                self.progress_bar.start()
+                self.cancel_btn.configure(state="normal")
             else:
-                self.run_btn.configure(state="normal", text="⚡ Run Market Listening Engine")
-                self.progress_bar.stop()
-                self.progress_bar.configure(mode="determinate")
-                self.progress_bar.set(1.0)
+                self.run_btn.configure(state="normal", text="🚀 Run Ingestion & Synthesis Engine")
+                self.cancel_btn.configure(state="disabled")
         self.after(0, update)
+
+    def _on_stop_engine_click(self):
+        """Handler to cancel or stop engine execution."""
+        if not self.is_running:
+            return
+        self._append_log("⚠️ Engine execution stop requested by user.")
+        self._set_running_state(False)
 
     def _start_engine_run(self):
         if self.is_running:
