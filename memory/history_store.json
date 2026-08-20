@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-08-20",
+  "historical_trends": {
+    "H1:enterprise llm bottlenecks driving shadow ai workarounds": {
+      "pattern_name": "Enterprise LLM Bottlenecks Driving Shadow AI Workarounds",
+      "hypothesis_id": "H1",
+      "first_seen_date": "2026-08-18",
+      "last_seen_date": "2026-08-20",
+      "occurrence_count": 4,
+      "last_source_count": 154,
+      "trend_status": "Strengthening",
+      "verbatim_quote": "When internal IT tools take 45 seconds per prompt response, frontline staff bypass security entirely."
+    },
+    "H2:middle managers squeezed by mandated usage kpis without support": {
+      "pattern_name": "Middle Managers Squeezed by Mandated Usage KPIs Without Support",
+      "hypothesis_id": "H2",
+      "first_seen_date": "2026-08-18",
+      "last_seen_date": "2026-08-20",
+      "occurrence_count": 4,
+      "last_source_count": 210,
+      "trend_status": "Strengthening",
+      "verbatim_quote": "VP declared 100% team usage of enterprise AI tools by end of Q3. My devs refuse to use the corporate wrapper because it hallucinates boilerplate and truncates context windows."
+    },
+    "H3:copilot privacy & data exposure risk in hr workflows": {
+      "pattern_name": "Copilot Privacy & Data Exposure Risk in HR Workflows",
+      "hypothesis_id": "H3",
+      "first_seen_date": "2026-08-18",
+      "last_seen_date": "2026-08-20",
+      "occurrence_count": 4,
+      "last_source_count": 142,
+      "trend_status": "Strengthening",
+      "verbatim_quote": "HR managers are panicking because Copilot draft emails are referencing confidential severance templates."
+    },
+    "EMERGING:executive ai mandates create impasse with developer realities": {
+      "pattern_name": "Executive AI Mandates Create Impasse with Developer Realities",
+      "hypothesis_id": "EMERGING",
+      "first_seen_date": "2026-08-18",
+      "last_seen_date": "2026-08-20",
+      "occurrence_count": 4,
+      "last_source_count": 89,
+      "trend_status": "Strengthening",
+      "verbatim_quote": "They put 'AI Transformation' in our quarterly KPIs but blocked every plugin that actually makes Claude or ChatGPT useful."
+    }
+  }
+}

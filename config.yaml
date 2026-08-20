@@ -1,0 +1,83 @@
+# Trailhead Market Listening Engine Configuration
+# Accessible configuration for non-technical managers and advisors
+
+version: "1.0"
+
+# Target Communities & RSS Feeds
+target_sources:
+  subreddits:
+    - humanresources
+    - managers
+    - ExperiencedDevs
+    - sysadmin
+    - ITManagers
+    - change_management
+    - consulting
+    - askmanagers
+    - ChatGPTCoding
+  
+  rss_feeds:
+    - name: "AI Change Management Jobs & Discussions"
+      url: "https://news.google.com/rss/search?q=AI+change+management+enterprise&hl=en-US&gl=US&ceid=US:en"
+    - name: "Enterprise AI Adoption Friction Feed"
+      url: "https://news.google.com/rss/search?q=enterprise+AI+rollout+frustration+employees&hl=en-US&gl=US&ceid=US:en"
+
+# Search Keywords for Ingestion
+search_keywords:
+  - "Copilot"
+  - "ChatGPT"
+  - "AI mandate"
+  - "AI tool"
+  - "shadow AI"
+
+# Ingestion Parameters
+parameters:
+  default_days_lookback: 7
+  max_days_lookback: 90
+  max_posts_per_subreddit: 25
+  max_comments_per_post: 5
+
+# Negative Filters (Noise & Fluff Exclusion Rules)
+negative_filters:
+  exclude_keywords:
+    - "buy now"
+    - "sponsored"
+    - "webinar"
+    - "whitepaper"
+    - "download ebook"
+    - "AGI 2030"
+    - "singularity"
+    - "superintelligence"
+    - "benchmark score"
+    - "MMLU"
+    - "HumanEval"
+    - "GPT-4 vs Claude 3.5 speed test"
+    - "excited to announce"
+    - "humbled and honored"
+    - "resume tips"
+    - "how to pass interview"
+
+# Core Target Hypotheses to Track
+hypotheses:
+  H1:
+    id: "H1"
+    name: "Impatience & Tool Friction Shift"
+    description: "Shift from fear of job loss to impatience/frustration with slow, broken, or overly restrictive enterprise AI tools."
+  H2:
+    id: "H2"
+    name: "Middle Management Burden"
+    description: "Middle managers caught carrying rollout burden without mandate support vs. being completely overlooked by leadership."
+  H3:
+    id: "H3"
+    name: "Executive Mandate vs Operational Reality Gap"
+    description: "Widening gap between top-down executive AI KPIs and ground-level workflow reality."
+  EMERGING:
+    id: "EMERGING"
+    name: "Emerging Organizational Friction Pattern"
+    description: "Unlisted strong organizational change friction pattern."
+
+# Claude Synthesizer Settings
+synthesis:
+  model: "claude-3-5-sonnet-20241022"
+  temperature: 0.1
+  max_tokens: 4000
