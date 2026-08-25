@@ -28,7 +28,12 @@ htmlcov/
 
 # Application Output & Storage state (Keep sample directory structure, ignore generated reports)
 output/*.md
+output/query_*.html
+output/weekly_digest_*.html
+output/digest_*.html
 !output/.gitkeep
+!output/Sample_Brief_*.html
+!output/README_Quickstart_Barbara.txt
 
 # IDE & OS
 .vscode/
