@@ -55,6 +55,12 @@ class ContentFilter:
         comments_text = " ".join([c.get("body", "") for c in item.get("top_comments", [])])
         full_text = f"{title}\n{body}\n{comments_text}"
 
+        # Rule 0: Forbidden PR / Marketing Syndication Networks (TipRanks, PRNewswire, etc.)
+        url_text = (item.get("url") or item.get("permalink") or "").lower()
+        pr_keywords = {"tipranks", "prnewswire", "businesswire", "globenewswire", "marketwatch", "benzinga", "seekingalpha", "techtarget", "accesswire"}
+        if any(pr in url_text or pr in full_text.lower() for pr in pr_keywords):
+            return False, "Excluded: Hard-rejected vendor PR / marketing syndication network"
+
         # Rule 1: Marketing / Vendor Fluff
         if self.marketing_pattern.search(full_text):
             return False, "Excluded: Vendor marketing / lead-gen whitepaper fluff"

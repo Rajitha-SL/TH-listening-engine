@@ -14,6 +14,7 @@ from typing import Dict, Any
 
 from src.collectors.reddit_collector import RedditCollector
 from src.collectors.web_collector import WebCollector
+from src.collectors.public_web_collector import PublicWebCollector
 from src.processors.filter import ContentFilter
 from src.processors.claude_synthesizer import ClaudeSynthesizer
 from src.storage.memory_manager import MemoryManager
@@ -97,6 +98,7 @@ def run_weekly_mode(config: Dict[str, Any], args: Any, status_callback=None) -> 
         keywords = config.get("search_keywords", [])
         
         days_lookback = getattr(args, 'days', None) or config.get("parameters", {}).get("default_days_lookback", 7)
+        limit = getattr(args, 'limit', None) or getattr(args, 'article_limit', None) or 5
         mock_mode = getattr(args, 'mock', False)
         history_path = getattr(args, 'history', 'memory/history_store.json')
         output_dir = getattr(args, 'output_dir', 'output')
@@ -127,7 +129,7 @@ def run_weekly_mode(config: Dict[str, Any], args: Any, status_callback=None) -> 
 
         # 3. Synthesize findings via Claude
         synthesizer = ClaudeSynthesizer(config)
-        synthesis_report = synthesizer.synthesize(filtered_items, mock=mock_mode)
+        synthesis_report = synthesizer.synthesize(filtered_items, mock=mock_mode, limit=limit)
         report_dict = synthesis_report.model_dump()
 
         # 4. Process trend memory & track momentum
@@ -146,7 +148,8 @@ def run_weekly_mode(config: Dict[str, Any], args: Any, status_callback=None) -> 
         html_output = html_builder.build_weekly_html(
             report_date=report_date,
             synthesis_data=report_dict,
-            findings=annotated_findings
+            findings=annotated_findings,
+            limit=limit
         )
 
         # 6. Save dual timestamped output files (.md and .html)
@@ -206,21 +209,21 @@ def run_query_mode(config: Dict[str, Any], args: Any, status_callback=None) -> s
         subreddits = config.get("target_sources", {}).get("subreddits", [])
         rss_feeds = config.get("target_sources", {}).get("rss_feeds", [])
         days_lookback = getattr(args, 'days', None) or config.get("parameters", {}).get("default_days_lookback", 14)
+        limit = getattr(args, 'limit', None) or getattr(args, 'article_limit', None) or 5
         mock_mode = getattr(args, 'mock', False)
         output_dir = getattr(args, 'output_dir', 'output')
 
-        # Convert prompt words into search keywords
-        query_keywords = [w.strip() for w in prompt_str.split() if len(w.strip()) > 3]
-
         # 1. Ingest
         reddit_collector = RedditCollector(config)
-        raw_reddit = reddit_collector.fetch_subreddit_posts(
+        raw_reddit = reddit_collector.search_posts(
+            query=prompt_str,
             subreddits=subreddits,
-            keywords=query_keywords,
-            days_lookback=days_lookback,
+            lookback_days=days_lookback,
+            limit=limit,
             mock=mock_mode
         )
 
+        query_keywords = [w.strip() for w in prompt_str.split() if len(w.strip()) > 3]
         web_collector = WebCollector()
         raw_web = web_collector.fetch_rss_feeds(
             rss_sources=rss_feeds,
@@ -229,7 +232,11 @@ def run_query_mode(config: Dict[str, Any], args: Any, status_callback=None) -> s
             mock=mock_mode
         )
 
-        raw_items = raw_reddit + raw_web
+        public_web_collector = PublicWebCollector(config)
+        raw_mirrors = public_web_collector.fetch_blind_fishbowl_mirrors(prompt_str, lookback_days=days_lookback, mock=mock_mode)
+        raw_jobs = public_web_collector.fetch_ai_job_transformation_signals(prompt_str, lookback_days=days_lookback, mock=mock_mode)
+
+        raw_items = raw_reddit + raw_web + raw_mirrors + raw_jobs
 
         # 2. Filter
         content_filter = ContentFilter(config)
@@ -237,7 +244,7 @@ def run_query_mode(config: Dict[str, Any], args: Any, status_callback=None) -> s
 
         # 3. Synthesize targeted report
         synthesizer = ClaudeSynthesizer(config)
-        synthesis_report = synthesizer.synthesize(filtered_items, query_prompt=prompt_str, mock=mock_mode)
+        synthesis_report = synthesizer.synthesize(filtered_items, query_prompt=prompt_str, mock=mock_mode, limit=limit)
         report_dict = synthesis_report.model_dump()
 
         # 4. Build targeted Markdown brief & HTML report
@@ -254,7 +261,8 @@ def run_query_mode(config: Dict[str, Any], args: Any, status_callback=None) -> s
             query_prompt=prompt_str,
             report_date=report_date,
             synthesis_data=report_dict,
-            findings=report_dict.get("findings", [])
+            findings=report_dict.get("findings", []),
+            limit=limit
         )
 
         # Print to stdout safely
@@ -329,6 +337,12 @@ def main():
         "--days",
         type=int,
         help="Override lookback period in days."
+    )
+    parser.add_argument(
+        "--limit", "--article-limit",
+        type=int,
+        default=5,
+        help="Target number of top evidence articles to synthesize and display (5 to 12)."
     )
     parser.add_argument(
         "--mock",

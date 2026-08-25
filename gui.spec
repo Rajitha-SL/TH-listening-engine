@@ -72,6 +72,21 @@ exe = EXE(
     entitlements_file=None,
 )
 
+dist_target = os.path.join('dist', 'TrailheadEngine')
+if os.path.exists(dist_target):
+    import stat
+    import shutil
+    def _handle_readonly(func, path, exc_info):
+        try:
+            os.chmod(path, stat.S_IWRITE)
+            func(path)
+        except Exception:
+            pass
+    try:
+        shutil.rmtree(dist_target, onerror=_handle_readonly)
+    except Exception:
+        pass
+
 coll = COLLECT(
     exe,
     a.binaries,

@@ -12,6 +12,14 @@ import zipfile
 import subprocess
 
 
+def _handle_remove_readonly(func, path, exc_info):
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+    except Exception:
+        pass
+
+
 def remove_dir_force(path):
     if not os.path.exists(path):
         return
@@ -30,11 +38,16 @@ def remove_dir_force(path):
                 os.rmdir(p)
             except Exception:
                 pass
-    try:
-        os.chmod(path, stat.S_IWRITE)
-        os.rmdir(path)
-    except Exception:
-        pass
+    if os.path.exists(path):
+        try:
+            shutil.rmtree(path, onerror=_handle_remove_readonly)
+        except Exception:
+            pass
+    if os.path.exists(path) and os.name == 'nt':
+        try:
+            subprocess.run(f'cmd /c rmdir /s /q "{path}"', shell=True, check=False)
+        except Exception:
+            pass
 
 
 def build():
@@ -46,6 +59,14 @@ def build():
     dist_dir = os.path.join(base_dir, "dist")
     target_dir = os.path.join(dist_dir, "TrailheadEngine")
     zip_path = os.path.join(dist_dir, "TrailheadEngine_v1.0_Standalone.zip")
+
+    # 0. Terminate running executable if open
+    if os.name == 'nt':
+        try:
+            subprocess.run("taskkill /F /IM TrailheadEngine.exe", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            time.sleep(0.5)
+        except Exception:
+            pass
 
     # 1. Clean previous build artifacts
     for attempt in range(5):

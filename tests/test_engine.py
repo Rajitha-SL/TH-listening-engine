@@ -185,7 +185,7 @@ def test_markdown_builder_formatting(sample_config):
             "pattern_name": "Latency Driving Shadow AI",
             "trend_status": "Strengthening",
             "date": today,
-            "source_url": "https://www.reddit.com/r/sysadmin/comments/mock_p3/",
+            "source_url": "https://www.reddit.com/r/sysadmin/comments/1avuk60/microsoft_copilot_rollout_experiences/",
             "verbatim_quote": "When internal IT tools take 45 seconds per prompt response, frontline staff bypass security entirely.",
             "persona_tag": "IT Admin",
             "company_context": "Mid-market Enterprise",
@@ -219,7 +219,7 @@ def test_html_builder_formatting(sample_config):
             "pattern_name": "Latency Driving Shadow AI",
             "trend_status": "Strengthening",
             "date": today,
-            "source_url": "https://www.reddit.com/r/sysadmin/comments/mock_p3/",
+            "source_url": "https://www.reddit.com/r/sysadmin/comments/1uvlcbd/ai_agent_use_cases/",
             "verbatim_quote": "When internal IT tools take 45 seconds per prompt response, frontline staff bypass security entirely.",
             "persona_tag": "IT Admin",
             "company_context": "Mid-market Enterprise",
@@ -236,7 +236,9 @@ def test_html_builder_formatting(sample_config):
     assert "Trailhead Market Listening Engine" in weekly_html
     assert "Latency Driving Shadow AI" in weekly_html
     assert 'target="_blank"' in weekly_html
-    assert "https://www.reddit.com/r/sysadmin/comments/mock_p3/" in weekly_html
+    assert 'rel="noopener noreferrer"' in weekly_html
+    assert "📄 Open Discussion Post on Reddit" in weekly_html
+    assert "https://www.reddit.com/r/sysadmin/comments/1uvlcbd/ai_agent_use_cases/" in weekly_html
     assert "👤 IT Admin" in weekly_html
 
     query_html = builder.build_query_html("Copilot security", today, synthesis_data, findings)
@@ -253,4 +255,20 @@ def test_24hour_timestamp_format():
     assert len(parts[1]) == 2  # MM
     assert len(parts[2]) == 2  # DD
     assert len(parts[3]) == 4  # HHMM
+
+
+def test_article_limit_slider(sample_config):
+    from src.processors.claude_synthesizer import ClaudeSynthesizer
+    from src.formatters.html_builder import HTMLBuilder
+    synthesizer = ClaudeSynthesizer(sample_config)
+    html_builder = HTMLBuilder(sample_config)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    for limit in [5, 8, 12]:
+        report = synthesizer.synthesize([], mock=True, limit=limit)
+        assert len(report.findings) == limit
+
+        report_dict = report.model_dump()
+        html_out = html_builder.build_query_html("Copilot limit test", today, report_dict, report_dict["findings"], limit=limit)
+        assert f"Top {limit} Findings" in html_out
 

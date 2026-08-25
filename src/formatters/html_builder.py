@@ -20,24 +20,26 @@ class HTMLBuilder:
         self,
         report_date: str,
         synthesis_data: Dict[str, Any],
-        findings: List[Dict[str, Any]]
+        findings: List[Dict[str, Any]],
+        limit: Optional[int] = None
     ) -> str:
         """Generates formatted HTML string for Weekly Intelligence Digest."""
         title = "🛰️ Trailhead Market Listening Engine - Weekly Digest"
         subtitle = f"Automated Weekly Market Ingestion & Synthesis | Date: {report_date}"
-        return self._render_html(title, subtitle, report_date, synthesis_data, findings, is_query=False)
+        return self._render_html(title, subtitle, report_date, synthesis_data, findings, is_query=False, limit=limit)
 
     def build_query_html(
         self,
         query_prompt: str,
         report_date: str,
         synthesis_data: Dict[str, Any],
-        findings: List[Dict[str, Any]]
+        findings: List[Dict[str, Any]],
+        limit: Optional[int] = None
     ) -> str:
         """Generates formatted HTML string for On-Demand Targeted Query Brief."""
         title = "🎯 Targeted Market Intelligence Brief"
         subtitle = f"Prompt: &ldquo;{html.escape(query_prompt)}&rdquo; | Date: {report_date}"
-        return self._render_html(title, subtitle, report_date, synthesis_data, findings, is_query=True, prompt=query_prompt)
+        return self._render_html(title, subtitle, report_date, synthesis_data, findings, is_query=True, prompt=query_prompt, limit=limit)
 
     def _render_html(
         self,
@@ -47,22 +49,26 @@ class HTMLBuilder:
         synthesis_data: Dict[str, Any],
         findings: List[Dict[str, Any]],
         is_query: bool = False,
-        prompt: Optional[str] = None
+        prompt: Optional[str] = None,
+        limit: Optional[int] = None
     ) -> str:
         exec_summary = synthesis_data.get("summary_overview") or synthesis_data.get("executive_summary") or "Market intelligence synthesis complete."
         
-        # Ensure findings display top items with direct links
-        evidence_items = findings[:5] if len(findings) >= 5 else findings
+        # Display all findings up to limit (if specified)
+        evidence_items = findings[:limit] if limit else findings
 
         # Status badge color helper
-        def status_badge(status: str) -> str:
+        def status_badge(status: str, delta_pct: float = 0.0) -> str:
             st = (status or "").lower()
+            pct_str = f" (+{delta_pct}%)" if delta_pct > 0 else (f" ({delta_pct}%)" if delta_pct < 0 else "")
             if "strengthen" in st:
-                return '<span class="badge badge-strengthening">📈 Strengthening</span>'
-            elif "new" in st:
-                return '<span class="badge badge-new">✨ New Pattern</span>'
+                return f'<span class="badge badge-strengthening">▲ Strengthening{pct_str}</span>'
             elif "fade" in st:
-                return '<span class="badge badge-fading">📉 Fading</span>'
+                return f'<span class="badge badge-fading">▼ Fading{pct_str}</span>'
+            elif "steady" in st:
+                return f'<span class="badge badge-steady">● Steady</span>'
+            elif "new" in st:
+                return f'<span class="badge badge-new">✨ New Pattern</span>'
             return f'<span class="badge badge-default">{html.escape(status or "Active")}</span>'
 
         # Signal strength badge
@@ -74,19 +80,67 @@ class HTMLBuilder:
                 return '<span class="badge badge-medium">Medium Signal</span>'
             return f'<span class="badge badge-low">{html.escape(strength or "Normal")}</span>'
 
+        ENTERPRISE_WHITELIST = [
+            "sysadmin", "ExperiencedDevs", "ITManagers", "MachineLearning",
+            "artificial", "LocalLLaMA", "ChatGPTCoding", "consulting",
+            "salesforce", "managers", "humanresources", "cybersecurity"
+        ]
+
+        import re
+
+        def _clean_html_text(text: str) -> str:
+            """Strips raw HTML markup (e.g. <table>, <tr>, <td>, <div>, <img>, <a>, <!-- SC_OFF -->) and unescapes entities."""
+            if not text or not isinstance(text, str):
+                return ""
+            text = html.unescape(text)
+            clean = re.sub(r'<!--.*?-->', ' ', text, flags=re.DOTALL)
+            clean = re.sub(r'<[^>]+>', ' ', clean)
+            clean = re.sub(r'\s+', ' ', clean).strip()
+            return clean
+
+        def _sanitize_url(raw_url: Optional[str]) -> str:
+            """Validates and cleans URL to guarantee a fully qualified, safe enterprise post or search URL."""
+            if not raw_url or not isinstance(raw_url, str):
+                return "https://www.reddit.com/search/?q=enterprise+AI"
+            url = raw_url.strip()
+            if not url or url == "#":
+                return "https://www.reddit.com/search/?q=enterprise+AI"
+            
+            # Ensure URL is fully qualified
+            if not (url.startswith("http://") or url.startswith("https://")):
+                if url.startswith("/"):
+                    url = f"https://www.reddit.com{url}"
+                elif url.startswith("r/"):
+                    url = f"https://www.reddit.com/{url}"
+                elif url.startswith("reddit.com"):
+                    url = f"https://www.{url}"
+                else:
+                    url = f"https://{url}"
+
+            return url
+
         # Build Findings HTML Cards
         findings_html = ""
         for i, item in enumerate(evidence_items, 1):
-            pattern_name = html.escape(str(item.get("pattern_name", f"Finding #{i}")))
-            hypothesis_id = html.escape(str(item.get("hypothesis_id", "H1")))
-            verbatim_quote = html.escape(str(item.get("verbatim_quote", "")))
-            persona_tag = html.escape(str(item.get("persona_tag", "Practitioner")))
-            company_context = html.escape(str(item.get("company_context", "Enterprise")))
+            pattern_name = html.escape(_clean_html_text(str(item.get("pattern_name", f"Finding #{i}"))))
+            hypothesis_id = html.escape(_clean_html_text(str(item.get("hypothesis_id", "H1"))))
+            verbatim_quote = html.escape(_clean_html_text(str(item.get("verbatim_quote", ""))))
+            persona_tag = html.escape(_clean_html_text(str(item.get("persona_tag", "Practitioner"))))
+            company_context = html.escape(_clean_html_text(str(item.get("company_context", "Enterprise"))))
             source_url = item.get("source_url") or item.get("permalink") or "#"
-            safe_source_url = html.escape(source_url)
+            sanitized_source_url = _sanitize_url(source_url)
+            safe_source_url = html.escape(sanitized_source_url)
             trend_status = str(item.get("trend_status", "Active"))
             source_count = item.get("source_count") or item.get("upvotes") or 1
-            exec_takeaway = html.escape(str(item.get("executive_takeaway", "Monitored practitioner signal.")))
+            exec_takeaway = html.escape(_clean_html_text(str(item.get("executive_takeaway", "Monitored practitioner signal."))))
+
+            url_lower = safe_source_url.lower()
+            if "reddit.com" in url_lower:
+                btn_label = "📄 Open Discussion Post on Reddit &rarr;"
+            elif any(jb in url_lower for jb in ["remoteok.com", "weworkremotely.com", "greenhouse.io", "lever.co", "indeed.com"]):
+                btn_label = "💼 Open AI Transformation Posting &rarr;"
+            else:
+                btn_label = "🌐 Open Verified Discussion Mirror &rarr;"
 
             findings_html += f"""
             <div class="card finding-card" id="finding-{i}">
@@ -96,7 +150,7 @@ class HTMLBuilder:
                         <h3 class="finding-title">{pattern_name}</h3>
                     </div>
                     <div class="badge-group">
-                        {status_badge(trend_status)}
+                        {status_badge(trend_status, float(item.get("delta_pct") or 0.0))}
                         {signal_badge(str(item.get("signal_strength", "High")))}
                     </div>
                 </div>
@@ -118,11 +172,10 @@ class HTMLBuilder:
 
                 <div class="source-link-row">
                     <a href="{safe_source_url}" target="_blank" rel="noopener noreferrer" class="source-btn">
-                        🔗 Open Original Source Article ({safe_source_url[:50]}...) &rarr;
+                        {btn_label}
                     </a>
                 </div>
-            </div>
-            """
+            </div>"""
 
         # Build Momentum Table Rows
         table_rows = ""
@@ -131,7 +184,8 @@ class HTMLBuilder:
             h_id = html.escape(str(item.get("hypothesis_id", "H1")))
             p_tag = html.escape(str(item.get("persona_tag", "Practitioner")))
             s_url = item.get("source_url") or item.get("permalink") or "#"
-            safe_url = html.escape(s_url)
+            sanitized_s_url = _sanitize_url(s_url)
+            safe_url = html.escape(sanitized_s_url)
             t_status = str(item.get("trend_status", "Active"))
             table_rows += f"""
             <tr>
