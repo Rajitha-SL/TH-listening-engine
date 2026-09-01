@@ -12,6 +12,8 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 
+from src.net_safety import is_allowed_fetch_url, is_public_https_url
+
 try:
     import feedparser
 except ImportError:
@@ -116,8 +118,11 @@ class PublicWebCollector:
                         title = job.get("position") or job.get("company") or ""
                         summary = job.get("description") or ""
                         link = job.get("url") or ""
-                        if not link.startswith("http"):
-                            link = f"https://remoteok.com/remote-jobs/{job.get('id', '')}"
+                        if not is_public_https_url(link):
+                            job_id = job.get("id", "")
+                            link = f"https://remoteok.com/remote-jobs/{job_id}"
+                            if not is_public_https_url(link):
+                                continue
 
                         tags = " ".join(job.get("tags", [])) if isinstance(job.get("tags"), list) else ""
                         title_corpus = f"{title} {tags}"
@@ -148,6 +153,8 @@ class PublicWebCollector:
                 ("HackerNews Hiring", "https://news.ycombinator.com/rss")
             ]
             for feed_name, feed_url in job_feeds:
+                if not is_allowed_fetch_url(feed_url):
+                    continue
                 try:
                     feed = feedparser.parse(feed_url, agent=self.headers["User-Agent"])
                     for entry in feed.entries[:10]:
@@ -164,7 +171,7 @@ class PublicWebCollector:
                         if pub_ts < cutoff_ts:
                             continue
 
-                        if ai_pattern.search(title) and link.startswith("http"):
+                        if ai_pattern.search(title) and is_public_https_url(link):
                             clean_summary = re.sub(r"<[^>]+>", " ", summary)
                             clean_summary = re.sub(r"\s+", " ", clean_summary).strip()[:280]
                             job_signals.append({

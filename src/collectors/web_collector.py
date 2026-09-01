@@ -7,6 +7,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 
+from src.net_safety import is_allowed_fetch_url
+
 try:
     import feedparser
 except ImportError:
@@ -35,7 +37,8 @@ class WebCollector:
         for source in rss_sources:
             name = source.get("name", "Unknown Feed")
             url = source.get("url")
-            if not url:
+            if not url or not is_allowed_fetch_url(url):
+                logger.warning("Skipping RSS source with non-public HTTPS URL: %s", name)
                 continue
 
             logger.info(f"Ingesting RSS feed: {name}...")

@@ -27,13 +27,15 @@ dist/
 htmlcov/
 
 # Application Output & Storage state (Keep sample directory structure, ignore generated reports)
-output/*.md
-output/query_*.html
-output/weekly_digest_*.html
-output/digest_*.html
+output/*
 !output/.gitkeep
-!output/Sample_Brief_*.html
 !output/README_Quickstart_Barbara.txt
+
+# Local intelligence stores (prompts, quotes, trend snapshots)
+data/*.db
+memory/*.json
+!data/.gitkeep
+!memory/.gitkeep
 
 # IDE & OS
 .vscode/

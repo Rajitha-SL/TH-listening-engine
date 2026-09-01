@@ -70,7 +70,7 @@ QUICK START IN 3 EASY STEPS:
    - Double-click 'TrailheadEngine.exe' to open the application.
    - Go to the 'Settings & API Key' tab.
    - Enter your Anthropic Claude API Key (starts with 'sk-ant-api...') and click 'Save Key'.
-   - Keys are stored strictly on your local computer in .env and never transmitted.
+   - Keys are stored on this computer in .env. Live runs send the key and scraped text to Anthropic; they are not uploaded to GitHub by the app.
 
 2. RUN AN ADVISORY BRIEF (ON-DEMAND QUERY MODE):
    - Navigate to the 'Main / Ingestion Engine' tab.

@@ -5,6 +5,7 @@ Built with CustomTkinter for executive-ready standalone operation.
 
 import sys
 import os
+import re
 import threading
 import subprocess
 import time
@@ -31,7 +32,11 @@ ctk.set_default_color_theme("blue")
 
 
 def update_env_file(key: str, value: str, env_path: str = ".env"):
-    """Updates or inserts key=value pair in .env file."""
+    """Updates or inserts key=value pair in .env file with restrictive permissions."""
+    if not key or any(ch in key for ch in "=\n\r\0") or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+        raise ValueError("Invalid environment variable name.")
+    if any(ch in value for ch in "\n\r\0"):
+        raise ValueError("Environment values cannot contain newlines.")
     lines = []
     found = False
     if os.path.exists(env_path):
@@ -46,6 +51,10 @@ def update_env_file(key: str, value: str, env_path: str = ".env"):
         lines.append(f"{key}={value}\n")
     with open(env_path, "w", encoding="utf-8") as f:
         f.writelines(lines)
+    try:
+        os.chmod(env_path, 0o600)
+    except OSError:
+        pass
     os.environ[key] = value
 
 
@@ -534,14 +543,14 @@ class TrailheadApp(ctk.CTk):
             fg_color=("gray70", "gray30"), hover_color=("gray60", "gray40"),
             command=lambda: self._show_tooltip_popup(
                 "Claude API Key Help",
-                "What is it?\nYour API key connects the engine to Anthropic's Claude 3.5 Sonnet LLM for market synthesis.\n\nSecurity:\nStored strictly in your local .env file. Never uploaded or shared.\n\nHow to get a key:\nSign in to console.anthropic.com, navigate to API Keys, and generate a key starting with 'sk-ant-api...'."
+                "What is it?\nYour API key connects the engine to Anthropic's Claude 3.5 Sonnet LLM for market synthesis.\n\nSecurity:\nThe key is stored in a local .env file (owner-read/write). Live runs send the key and scraped post text to Anthropic. They are not uploaded to GitHub by this app.\n\nHow to get a key:\nSign in to console.anthropic.com, navigate to API Keys, and generate a key starting with 'sk-ant-api...'."
             )
         )
         self.btn_help_api.pack(side="right", padx=15, pady=(15, 5))
 
         self.api_key_desc = ctk.CTkLabel(
             self.key_box, 
-            text="Enter your Anthropic API Key below. It will be saved securely to your local .env file.",
+            text="Paste your Anthropic API key and click Save. The key is kept in a local .env file; live synthesis sends it to Anthropic with the scraped text.",
             font=ctk.CTkFont(size=12), text_color="gray"
         )
         self.api_key_desc.pack(padx=15, pady=(0, 10), anchor="w")
@@ -551,10 +560,11 @@ class TrailheadApp(ctk.CTk):
 
         current_key = os.environ.get("ANTHROPIC_API_KEY", "")
         self.api_key_entry = ctk.CTkEntry(
-            self.key_entry_frame, show="*", placeholder_text="sk-ant-api...",
+            self.key_entry_frame, show="*", placeholder_text="sk-ant-api... (paste to replace a saved key)",
             font=ctk.CTkFont(size=13)
         )
-        self.api_key_entry.insert(0, current_key)
+        if not current_key:
+            self.api_key_entry.insert(0, "")
         self.api_key_entry.pack(side="left", fill="x", expand=True, padx=(0, 10))
 
         self.show_key_var = ctk.BooleanVar(value=False)
@@ -859,9 +869,17 @@ class TrailheadApp(ctk.CTk):
 
     def _save_api_key(self):
         new_key = self.api_key_entry.get().strip()
-        update_env_file("ANTHROPIC_API_KEY", new_key)
+        if not new_key:
+            self._append_log("API Key not saved: paste a key before clicking Save.")
+            return
+        try:
+            update_env_file("ANTHROPIC_API_KEY", new_key)
+        except ValueError as exc:
+            self._append_log(f"API Key not saved: {exc}")
+            return
+        self.api_key_entry.delete(0, "end")
         self._check_api_key_status()
-        self._append_log("API Key saved successfully to .env")
+        self._append_log("API Key saved to local .env (owner-only permissions when the OS allows).")
 
     def _on_mode_change(self):
         if self.mode_var.get() == "weekly":
@@ -921,9 +939,13 @@ class TrailheadApp(ctk.CTk):
         dialog = ctk.CTkInputDialog(text="Enter your Anthropic Claude API Key:", title="Configure API Key")
         key = dialog.get_input()
         if key is not None and key.strip():
-            update_env_file("ANTHROPIC_API_KEY", key.strip())
+            try:
+                update_env_file("ANTHROPIC_API_KEY", key.strip())
+            except ValueError as exc:
+                self._log(f"[Config] API Key not saved: {exc}")
+                return
             self._check_api_key_status()
-            self._log("[Config] API Key saved to .env file.")
+            self._log("[Config] API Key saved to local .env file.")
 
     def _show_help_dialog(self):
         """Opens help and documentation popover."""

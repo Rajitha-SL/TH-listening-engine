@@ -6,9 +6,9 @@ on:
     - cron: '0 14 * * 1'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
+# Read-only: generated briefs are uploaded as artifacts, not pushed to main.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   run-digest:
@@ -17,9 +17,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4.2.2
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5.4.0
@@ -36,16 +33,15 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          python main.py --mode digest --days 7 --limit 5
+          python main.py --mode weekly --days 7 --limit 5
 
-      - name: Commit and Push Generated Weekly Briefs
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add output/ data/
-          if git diff --staged --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "Automated Weekly Intelligence Digest [skip ci]"
-            git push origin HEAD:main
-          fi
+      - name: Upload weekly digest artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-intelligence-digest
+          path: |
+            output/
+            data/
+            memory/
+          if-no-files-found: warn
+          retention-days: 14

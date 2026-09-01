@@ -12,6 +12,8 @@ import concurrent.futures
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any
 
+from src.net_safety import is_safe_subreddit_name
+
 logger = logging.getLogger("reddit_collector")
 
 ENTERPRISE_SUBREDDITS = [
@@ -155,7 +157,10 @@ class RedditCollector:
     ) -> List[Dict[str, Any]]:
         """Harvests candidate posts for a single subreddit with rate-limit jitter."""
         time.sleep(random.uniform(0.1, 0.3))
-        clean_sub = sub.strip("r/")
+        clean_sub = sub.strip().strip("/").removeprefix("r/").removeprefix("R/")
+        if not is_safe_subreddit_name(clean_sub):
+            logger.warning("Skipping unsafe subreddit token: %r", sub)
+            return []
         encoded_query = urllib.parse.quote(search_keyword)
         json_url = f"https://www.reddit.com/r/{clean_sub}/search.json?q={encoded_query}&restrict_sr=1&sort=new&t={time_filter}&limit=25"
 

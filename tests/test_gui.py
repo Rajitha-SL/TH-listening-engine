@@ -33,6 +33,11 @@ def test_update_env_file(test_env_file):
     with open(test_env_file, "r", encoding="utf-8") as f:
         content_updated = f.read()
     assert "ANTHROPIC_API_KEY=sk-test-key" in content_updated
+    try:
+        update_env_file("ANTHROPIC_API_KEY", "sk-test\nOTHER=pwn", env_path=test_env_file)
+        assert False, "newline injection should be rejected"
+    except ValueError:
+        pass
 
 
 def test_gui_engine_mock_query_run(sample_config):
