@@ -28,7 +28,7 @@ Before running live market synthesis, configure your Anthropic Claude API key.
 3. Click **Save Key**.
 4. Check the left sidebar: the API Key badge will update to **Configured ✓** in green.
 
-> 🔒 **Privacy & Security Note:** Your API key is stored strictly on your local machine in a `.env` file and is never uploaded or transmitted to third parties.
+> 🔒 **Privacy & Security Note:** Your API key is stored on this computer in a `.env` file. When you run a live (non-mock) brief, the key and the scraped discussion text are sent to Anthropic to generate the synthesis. They are not uploaded to GitHub by the desktop app.
 
 ---
 

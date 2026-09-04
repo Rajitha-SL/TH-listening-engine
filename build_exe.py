@@ -45,7 +45,7 @@ def remove_dir_force(path):
             pass
     if os.path.exists(path) and os.name == 'nt':
         try:
-            subprocess.run(f'cmd /c rmdir /s /q "{path}"', shell=True, check=False)
+            subprocess.run(["cmd", "/c", "rmdir", "/s", "/q", path], check=False)
         except Exception:
             pass
 
@@ -63,7 +63,12 @@ def build():
     # 0. Terminate running executable if open
     if os.name == 'nt':
         try:
-            subprocess.run("taskkill /F /IM TrailheadEngine.exe", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(
+                ["taskkill", "/F", "/IM", "TrailheadEngine.exe"],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
             time.sleep(0.5)
         except Exception:
             pass
@@ -120,6 +125,17 @@ def build():
                 zf.write(abs_path, rel_path)
 
     print(f"Build Complete! Distribution ready: {zip_path}")
+
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        secret_hits = [
+            info.filename
+            for info in zf.infolist()
+            if os.path.basename(info.filename) in {".env", ".env.local"}
+            or info.filename.endswith("/.env")
+        ]
+        if secret_hits:
+            print("[ERROR] Distribution ZIP contains .env; refusing to ship an API key.")
+            sys.exit(1)
 
 
 if __name__ == "__main__":

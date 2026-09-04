@@ -6,6 +6,8 @@ Enforces strict zero-hallucination layout with clickable URLs, verbatim quotes, 
 from datetime import datetime, timezone
 from typing import Dict, Any, List
 
+from src.net_safety import markdown_href, markdown_link_label
+
 
 class MarkdownBuilder:
     """Renders structured synthesis reports into clean GitHub-flavored Markdown."""
@@ -36,11 +38,11 @@ class MarkdownBuilder:
         md.append("| :--- | :---: | :--- | :---: | :--- |")
 
         for f in findings:
-            pattern = f.get("pattern_name", "Friction Pattern")
+            pattern = markdown_link_label(str(f.get("pattern_name", "Friction Pattern")))
             status = f.get("trend_status", "New Pattern")
-            persona = f.get("persona_tag", "Practitioner")
-            strength = f.get("signal_strength", "Medium")
-            url = f.get("source_url", "#")
+            persona = markdown_link_label(str(f.get("persona_tag", "Practitioner")))
+            strength = markdown_link_label(str(f.get("signal_strength", "Medium")))
+            url = markdown_href(f.get("source_url", "#"))
             
             # Status emoji badge
             badge = "🆕 New" if status == "New Pattern" else ("📈 Strengthening" if status == "Strengthening" else ("➡️ Steady" if status == "Steady" else "📉 Fading"))
@@ -73,16 +75,16 @@ class MarkdownBuilder:
                 md.append(f"_{h_desc}_\n")
 
             for idx, f in enumerate(h_findings, 1):
-                pattern = f.get("pattern_name", "Friction Finding")
-                status = f.get("trend_status", "New Pattern")
-                quote = f.get("verbatim_quote", "")
-                url = f.get("source_url", "#")
+                pattern = markdown_link_label(str(f.get("pattern_name", "Friction Finding")))
+                status = markdown_link_label(str(f.get("trend_status", "New Pattern")))
+                quote = str(f.get("verbatim_quote", "")).replace("\n", " ")
+                url = markdown_href(f.get("source_url", "#"))
                 date_str = f.get("date", report_date)
-                persona = f.get("persona_tag", "Practitioner")
-                company_ctx = f.get("company_context", "Enterprise context")
-                strength = f.get("signal_strength", "High")
+                persona = markdown_link_label(str(f.get("persona_tag", "Practitioner")))
+                company_ctx = markdown_link_label(str(f.get("company_context", "Enterprise context")))
+                strength = markdown_link_label(str(f.get("signal_strength", "High")))
                 count = f.get("source_count", 1)
-                takeaway = f.get("executive_takeaway", "")
+                takeaway = str(f.get("executive_takeaway", "")).replace("\n", " ")
 
                 md.append(f"#### {idx}. {pattern}")
                 md.append(f"- **Trend Momentum:** `{status}`")
@@ -116,13 +118,13 @@ class MarkdownBuilder:
 
         md.append("## 🔍 Direct Grounded Evidence")
         for idx, f in enumerate(findings, 1):
-            pattern = f.get("pattern_name", "Friction Finding")
-            quote = f.get("verbatim_quote", "")
-            url = f.get("source_url", "#")
+            pattern = markdown_link_label(str(f.get("pattern_name", "Friction Finding")))
+            quote = str(f.get("verbatim_quote", "")).replace("\n", " ")
+            url = markdown_href(f.get("source_url", "#"))
             date_str = f.get("date", report_date)
-            persona = f.get("persona_tag", "Practitioner")
-            company_ctx = f.get("company_context", "Enterprise context")
-            takeaway = f.get("executive_takeaway", "")
+            persona = markdown_link_label(str(f.get("persona_tag", "Practitioner")))
+            company_ctx = markdown_link_label(str(f.get("company_context", "Enterprise context")))
+            takeaway = str(f.get("executive_takeaway", "")).replace("\n", " ")
 
             md.append(f"### {idx}. {pattern}")
             md.append(f"- **Persona:** `{persona}` | **Context:** `{company_ctx}`")

@@ -8,8 +8,7 @@ datas = [
     ('config.yaml', '.'),
 ]
 
-if os.path.exists('.env'):
-    datas.append(('.env', '.'))
+# Never bundle .env — API keys must be supplied on the user's machine at runtime.
 
 # Collect all customtkinter assets (fonts, themes, binaries, hidden imports)
 ctk_datas, ctk_binaries, ctk_hiddenimports = collect_all('customtkinter')

@@ -8,6 +8,8 @@ import html
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
+from src.net_safety import sanitize_public_https_url
+
 
 class HTMLBuilder:
     """Builds responsive, executive-ready HTML reports with grounded evidence cards."""
@@ -99,25 +101,7 @@ class HTMLBuilder:
             return clean
 
         def _sanitize_url(raw_url: Optional[str]) -> str:
-            """Validates and cleans URL to guarantee a fully qualified, safe enterprise post or search URL."""
-            if not raw_url or not isinstance(raw_url, str):
-                return "https://www.reddit.com/search/?q=enterprise+AI"
-            url = raw_url.strip()
-            if not url or url == "#":
-                return "https://www.reddit.com/search/?q=enterprise+AI"
-            
-            # Ensure URL is fully qualified
-            if not (url.startswith("http://") or url.startswith("https://")):
-                if url.startswith("/"):
-                    url = f"https://www.reddit.com{url}"
-                elif url.startswith("r/"):
-                    url = f"https://www.reddit.com/{url}"
-                elif url.startswith("reddit.com"):
-                    url = f"https://www.{url}"
-                else:
-                    url = f"https://{url}"
-
-            return url
+            return sanitize_public_https_url(raw_url)
 
         # Build Findings HTML Cards
         findings_html = ""
@@ -192,7 +176,7 @@ class HTMLBuilder:
                 <td><strong>[{h_id}]</strong> {p_name}</td>
                 <td>{status_badge(t_status)}</td>
                 <td><span class="persona-pill">{p_tag}</span></td>
-                <td><a href="{safe_url}" target="_blank" class="table-link">View Source &rarr;</a></td>
+                <td><a href="{safe_url}" target="_blank" rel="noopener noreferrer" class="table-link">View Source &rarr;</a></td>
             </tr>
             """
 
@@ -201,6 +185,7 @@ class HTMLBuilder:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; base-uri 'none'; form-action 'none';">
     <title>{html.escape(title)}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
